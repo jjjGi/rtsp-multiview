@@ -1,0 +1,21 @@
+05:24:29.368  [CAM2]  connecting rtsp://127.0.0.1:8554/cam2
+05:24:29.367  [main]  started 4 channels
+05:24:29.368  [CAM1]  connecting rtsp://127.0.0.1:8554/cam1
+05:24:29.368  [CAM3]  connecting rtsp://127.0.0.1:8554/cam3
+05:24:29.368  [CAM4]  connecting rtsp://127.0.0.1:8554/cam4
+05:24:31.647  [CAM3]  LIVE 640x360 h264
+05:24:31.769  [CAM4]  LIVE 640x360 h264
+05:24:32.260  [CAM1]  LIVE 640x360 h264
+05:24:32.414  [CAM2]  LIVE 640x360 h264
+05:24:37.353  [CAM2]  lost: read: End of file
+05:24:37.355  [CAM2]  retry #1 in 500 ms (read: End of file)
+05:24:37.910  [CAM2]  connecting rtsp://127.0.0.1:8554/cam2
+05:24:37.928  [CAM2]  retry #2 in 1000 ms (open: Server returned 404 Not Found)
+05:24:38.969  [CAM2]  connecting rtsp://127.0.0.1:8554/cam2
+05:24:38.974  [CAM2]  retry #3 in 2000 ms (open: Server returned 404 Not Found)
+05:24:40.993  [CAM2]  connecting rtsp://127.0.0.1:8554/cam2
+05:24:40.995  [CAM2]  retry #4 in 4000 ms (open: Server returned 404 Not Found)
+05:24:45.033  [CAM2]  connecting rtsp://127.0.0.1:8554/cam2
+05:24:45.052  [CAM2]  retry #5 in 8000 ms (open: Server returned 404 Not Found)
+05:24:53.089  [CAM2]  connecting rtsp://127.0.0.1:8554/cam2
+05:24:55.286  [CAM2]  LIVE 640x360 h264

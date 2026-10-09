@@ -1,0 +1,5 @@
+# 채널이름 RTSP주소  (scripts\start_cameras.ps1 이 띄우는 가상 카메라 4대)
+CAM1 rtsp://127.0.0.1:8554/cam1
+CAM2 rtsp://127.0.0.1:8554/cam2
+CAM3 rtsp://127.0.0.1:8554/cam3
+CAM4 rtsp://127.0.0.1:8554/cam4
