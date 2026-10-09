@@ -79,9 +79,15 @@ void DrawVideo(HDC dc, const RECT& tile, const ChannelSnapshot& s) {
     StretchDIBits(dc, dx, dy, dw, dh, 0, 0, s.width, s.height, s.bgra.data(), &bi, DIB_RGB_COLORS, SRCCOPY);
 }
 
+constexpr int64_t kStallWarnMs = 1000;  // 연결은 살아 있어도 이 시간 동안 새 프레임이 없으면 화면에 경고
+const COLORREF kStallColor = RGB(230, 126, 34);
+
 void DrawTile(HDC dc, const RECT& tile, StreamWorker& w, HFONT small, HFONT big) {
     const ChannelSnapshot s = w.Snapshot(true);
     const int64_t now = NowMs();
+    const int64_t age = s.lastFrameMs ? now - s.lastFrameMs : 0;
+    const bool stalled = s.state == ChannelState::Live && age > kStallWarnMs;
+    const COLORREF accent = stalled ? kStallColor : StateColor(s.state);
 
     FillRectColor(dc, tile, RGB(18, 20, 24));
     DrawVideo(dc, tile, s);
@@ -89,9 +95,13 @@ void DrawTile(HDC dc, const RECT& tile, StreamWorker& w, HFONT small, HFONT big)
     SetBkMode(dc, TRANSPARENT);
 
     // 영상이 멈춘 채널: 마지막 화면 위에 상태를 크게 표시
-    if (s.state != ChannelState::Live) {
+    if (s.state != ChannelState::Live || stalled) {
         std::wstring msg;
-        if (s.state == ChannelState::Reconnecting) {
+        if (stalled) {
+            wchar_t buf[128];
+            swprintf_s(buf, L"STALLED  no frame for %.1fs", age / 1000.0);
+            msg = buf;
+        } else if (s.state == ChannelState::Reconnecting) {
             const double sec = std::max<int64_t>(0, s.retryAtMs - now) / 1000.0;
             wchar_t buf[128];
             swprintf_s(buf, L"RECONNECTING  in %.1fs  (attempt %d)", sec, s.attempt);
@@ -106,11 +116,18 @@ void DrawTile(HDC dc, const RECT& tile, StreamWorker& w, HFONT small, HFONT big)
         band.bottom = band.top + 68;
         FillRectColor(dc, band, RGB(0, 0, 0));
         SelectObject(dc, big);
-        SetTextColor(dc, StateColor(s.state));
+        SetTextColor(dc, accent);
         RECT t1 = band;
         t1.bottom = band.top + 40;
         DrawTextW(dc, msg.c_str(), -1, &t1, DT_CENTER | DT_SINGLELINE | DT_VCENTER);
-        if (!s.lastError.empty()) {
+        if (stalled) {
+            SelectObject(dc, small);
+            SetTextColor(dc, RGB(200, 200, 200));
+            RECT t2 = band;
+            t2.top = band.top + 38;
+            DrawTextW(dc, L"connection open, waiting for packets (reconnect after 3.0s)", -1, &t2,
+                      DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+        } else if (!s.lastError.empty()) {
             SelectObject(dc, small);
             SetTextColor(dc, RGB(200, 200, 200));
             RECT t2 = band;
@@ -125,18 +142,18 @@ void DrawTile(HDC dc, const RECT& tile, StreamWorker& w, HFONT small, HFONT big)
     FillRectColor(dc, bar, RGB(0, 0, 0));
     SelectObject(dc, small);
     wchar_t info[256];
-    const long long ageMs = s.lastFrameMs ? (now - s.lastFrameMs) : -1;
+    const long long ageMs = s.lastFrameMs ? age : -1;
     swprintf_s(info, L"  %s   %S   %.1f fps   %dx%d   %S   reconnects %d   last frame %lld ms",
-               Widen(w.Name()).c_str(), ToString(s.state), s.fps, s.width, s.height,
+               Widen(w.Name()).c_str(), stalled ? "STALLED" : ToString(s.state), s.fps, s.width, s.height,
                s.codec.empty() ? "-" : s.codec.c_str(), s.reconnects, ageMs);
     SetTextColor(dc, RGB(235, 235, 235));
     DrawTextW(dc, info, -1, &bar, DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
 
     // 상태 점
     RECT dot = {bar.left + 6, bar.top + 9, bar.left + 14, bar.top + 17};
-    FillRectColor(dc, dot, StateColor(s.state));
+    FillRectColor(dc, dot, accent);
 
-    DrawFrameBorder(dc, tile, StateColor(s.state), 3);
+    DrawFrameBorder(dc, tile, accent, 3);
 }
 
 void Paint(HWND hwnd) {
