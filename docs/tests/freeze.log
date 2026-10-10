@@ -1,0 +1,14 @@
+02:41:44.277  [probe]  state CONNECTING
+02:41:44.278  [freeze]  connecting rtsp://127.0.0.1:8554/cam3
+02:41:46.846  [freeze]  LIVE 640x360 h264 (open 9 ms, stream info 1629 ms, first frame 923 ms)
+02:41:46.857  [probe]  state LIVE
+02:41:53.423  [freeze]  lost: stalled: no video frame for 3017 ms (0 other packets meanwhile)
+02:41:53.427  [freeze]  retry #1 in 500 ms (stalled: no video frame for 3017 ms (0 other packets meanwhile))
+02:41:53.454  [probe]  state RECONNECTING
+02:41:53.979  [freeze]  connecting rtsp://127.0.0.1:8554/cam3
+02:41:54.009  [probe]  state CONNECTING
+02:41:59.756  [freeze]  LIVE 640x360 h264 (open 15 ms, stream info 5005 ms, first frame 753 ms)
+02:41:59.766  [probe]  state LIVE
+02:42:14.307  [freeze]  lost: stopped
+02:42:14.308  [freeze]  stopped
+02:42:14.309  [probe]  SUMMARY state=LIVE reconnects=1 decode_fps_max=26.8

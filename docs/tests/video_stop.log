@@ -1,0 +1,11 @@
+02:42:16.379  [probe]  state CONNECTING
+02:42:16.380  [video_stop]  connecting rtsp://127.0.0.1:8554/cam5
+02:42:19.429  [video_stop]  LIVE 640x360 h264 (open 18 ms, stream info 2115 ms, first frame 910 ms)
+02:42:19.458  [probe]  state LIVE
+02:42:24.391  [video_stop]  lost: stalled: no video frame for 3044 ms (140 other packets meanwhile)
+02:42:24.395  [video_stop]  retry #1 in 500 ms (stalled: no video frame for 3044 ms (140 other packets meanwhile))
+02:42:24.406  [probe]  state RECONNECTING
+02:42:24.950  [video_stop]  connecting rtsp://127.0.0.1:8554/cam5
+02:42:24.965  [probe]  state CONNECTING
+02:42:28.431  [video_stop]  stopped
+02:42:28.431  [probe]  SUMMARY state=CONNECTING reconnects=0 decode_fps_max=25.0

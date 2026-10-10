@@ -1,0 +1,25 @@
+02:40:18.592  [CAM2]  connecting rtsp://127.0.0.1:8554/cam2
+02:40:18.591  [main]  started 4 channels
+02:40:18.592  [CAM1]  connecting rtsp://127.0.0.1:8554/cam1
+02:40:18.592  [CAM4]  connecting rtsp://127.0.0.1:8554/cam4
+02:40:18.592  [CAM3]  connecting rtsp://127.0.0.1:8554/cam3
+02:40:20.899  [CAM2]  LIVE 640x360 h264 (open 16 ms, stream info 1376 ms, first frame 914 ms)
+02:40:21.132  [CAM3]  LIVE 640x360 h264 (open 14 ms, stream info 1594 ms, first frame 930 ms)
+02:40:21.345  [CAM4]  LIVE 640x360 h264 (open 16 ms, stream info 1790 ms, first frame 946 ms)
+02:40:21.628  [CAM1]  LIVE 640x360 h264 (open 16 ms, stream info 2092 ms, first frame 928 ms)
+02:40:25.270  [CAM2]  lost: read: End of file
+02:40:25.270  [CAM2]  retry #1 in 500 ms (read: End of file)
+02:40:25.820  [CAM2]  connecting rtsp://127.0.0.1:8554/cam2
+02:40:25.822  [CAM2]  retry #2 in 1000 ms (open: Server returned 404 Not Found)
+02:40:26.857  [CAM2]  connecting rtsp://127.0.0.1:8554/cam2
+02:40:26.862  [CAM2]  retry #3 in 2000 ms (open: Server returned 404 Not Found)
+02:40:28.862  [CAM2]  connecting rtsp://127.0.0.1:8554/cam2
+02:40:28.866  [CAM2]  retry #4 in 4000 ms (open: Server returned 404 Not Found)
+02:40:32.877  [CAM2]  connecting rtsp://127.0.0.1:8554/cam2
+02:40:32.881  [CAM2]  retry #5 in 8000 ms (open: Server returned 404 Not Found)
+02:40:40.923  [CAM2]  connecting rtsp://127.0.0.1:8554/cam2
+02:40:43.046  [CAM2]  LIVE 640x360 h264 (open 6 ms, stream info 1201 ms, first frame 915 ms)
+02:40:54.257  [CAM3]  lost: stalled: no video frame for 3091 ms (0 other packets meanwhile)
+02:40:54.258  [CAM3]  retry #1 in 500 ms (stalled: no video frame for 3091 ms (0 other packets meanwhile))
+02:40:54.802  [CAM3]  connecting rtsp://127.0.0.1:8554/cam3
+02:41:00.098  [CAM3]  LIVE 640x360 h264 (open 5 ms, stream info 5013 ms, first frame 274 ms)

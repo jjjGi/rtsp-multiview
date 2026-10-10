@@ -1,0 +1,24 @@
+02:41:09.689  [probe]  state CONNECTING
+02:41:09.690  [cut]  connecting rtsp://127.0.0.1:8554/cam2
+02:41:12.113  [cut]  LIVE 640x360 h264 (open 7 ms, stream info 1484 ms, first frame 926 ms)
+02:41:12.127  [probe]  state LIVE
+02:41:15.832  [cut]  lost: read: End of file
+02:41:15.836  [cut]  retry #1 in 500 ms (read: End of file)
+02:41:15.858  [probe]  state RECONNECTING
+02:41:16.396  [cut]  connecting rtsp://127.0.0.1:8554/cam2
+02:41:16.400  [cut]  retry #2 in 1000 ms (open: Server returned 404 Not Found)
+02:41:17.443  [cut]  connecting rtsp://127.0.0.1:8554/cam2
+02:41:17.458  [probe]  state CONNECTING
+02:41:17.462  [cut]  retry #3 in 2000 ms (open: Server returned 404 Not Found)
+02:41:17.489  [probe]  state RECONNECTING
+02:41:19.487  [cut]  connecting rtsp://127.0.0.1:8554/cam2
+02:41:19.505  [cut]  retry #4 in 4000 ms (open: Server returned 404 Not Found)
+02:41:23.549  [cut]  connecting rtsp://127.0.0.1:8554/cam2
+02:41:23.553  [cut]  retry #5 in 8000 ms (open: Server returned 404 Not Found)
+02:41:31.553  [cut]  connecting rtsp://127.0.0.1:8554/cam2
+02:41:31.568  [probe]  state CONNECTING
+02:41:34.496  [cut]  LIVE 640x360 h264 (open 4 ms, stream info 2016 ms, first frame 923 ms)
+02:41:34.525  [probe]  state LIVE
+02:41:41.726  [cut]  lost: stopped
+02:41:41.727  [cut]  stopped
+02:41:41.728  [probe]  SUMMARY state=LIVE reconnects=1 decode_fps_max=25.3

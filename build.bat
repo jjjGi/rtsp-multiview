@@ -12,5 +12,10 @@ cl /nologo /std:c++17 /O2 /EHsc /W4 /utf-8 /I%FF%\include /Fobuild\ /Fe:build\mu
 
 cl /nologo /std:c++17 /EHsc /W4 /utf-8 /Fobuild\ /Fe:build\backoff_test.exe tests\backoff_test.cpp || exit /b 1
 
+rem Headless receive probe used by tests/failure_tests.ps1
+cl /nologo /std:c++17 /O2 /EHsc /W4 /utf-8 /I%FF%\include /Fobuild\ /Fe:build\probe.exe ^
+   tests\probe.cpp src\stream_worker.cpp src\log.cpp ^
+   /link /LIBPATH:%FF%\lib avformat.lib avcodec.lib avutil.lib swscale.lib || exit /b 1
+
 copy /y %FF%\bin\*.dll build\ >nul
 echo build ok

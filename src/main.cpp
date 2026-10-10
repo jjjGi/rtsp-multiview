@@ -24,6 +24,20 @@ namespace {
 std::vector<std::unique_ptr<StreamWorker>> g_workers;
 int g_focus = -1;  // -1: 바둑판, 0~: 해당 채널 크게 보기
 
+// 매 프레임 다시 만들지 않도록 글꼴과 뒷버퍼는 한 번 만들어 재사용한다.
+HFONT g_small = nullptr;
+HFONT g_big = nullptr;
+HDC g_backDc = nullptr;
+HBITMAP g_backBmp = nullptr;
+HGDIOBJ g_backOldBmp = nullptr;
+int g_backW = 0;
+int g_backH = 0;
+
+// 실제 화면 갱신 횟수 (디코딩 FPS와 별개)
+int g_paintCount = 0;
+int64_t g_paintWindowStart = 0;
+double g_renderFps = 0.0;
+
 std::wstring Widen(const std::string& s) {
     if (s.empty()) return {};
     const int n = MultiByteToWideChar(CP_UTF8, 0, s.data(), static_cast<int>(s.size()), nullptr, 0);
@@ -58,39 +72,39 @@ void DrawFrameBorder(HDC dc, RECT r, COLORREF c, int thickness) {
 }
 
 // 비율을 유지한 채 타일 안에 영상을 그린다.
-void DrawVideo(HDC dc, const RECT& tile, const ChannelSnapshot& s) {
-    if (s.bgra.empty() || s.width <= 0 || s.height <= 0) return;
+void DrawVideo(HDC dc, const RECT& tile, const Frame* f) {
+    if (!f || f->bgra.empty() || f->width <= 0 || f->height <= 0) return;
     const int tw = tile.right - tile.left;
     const int th = tile.bottom - tile.top;
-    const double scale = std::min(static_cast<double>(tw) / s.width, static_cast<double>(th) / s.height);
-    const int dw = static_cast<int>(s.width * scale);
-    const int dh = static_cast<int>(s.height * scale);
+    const double scale = std::min(static_cast<double>(tw) / f->width, static_cast<double>(th) / f->height);
+    const int dw = static_cast<int>(f->width * scale);
+    const int dh = static_cast<int>(f->height * scale);
     const int dx = tile.left + (tw - dw) / 2;
     const int dy = tile.top + (th - dh) / 2;
 
     BITMAPINFO bi{};
     bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bi.bmiHeader.biWidth = s.width;
-    bi.bmiHeader.biHeight = -s.height;  // 위에서 아래로 저장된 픽셀
+    bi.bmiHeader.biWidth = f->width;
+    bi.bmiHeader.biHeight = -f->height;  // 위에서 아래로 저장된 픽셀
     bi.bmiHeader.biPlanes = 1;
     bi.bmiHeader.biBitCount = 32;
     bi.bmiHeader.biCompression = BI_RGB;
     SetStretchBltMode(dc, HALFTONE);
-    StretchDIBits(dc, dx, dy, dw, dh, 0, 0, s.width, s.height, s.bgra.data(), &bi, DIB_RGB_COLORS, SRCCOPY);
+    StretchDIBits(dc, dx, dy, dw, dh, 0, 0, f->width, f->height, f->bgra.data(), &bi, DIB_RGB_COLORS, SRCCOPY);
 }
 
 constexpr int64_t kStallWarnMs = 1000;  // 연결은 살아 있어도 이 시간 동안 새 프레임이 없으면 화면에 경고
 const COLORREF kStallColor = RGB(230, 126, 34);
 
 void DrawTile(HDC dc, const RECT& tile, StreamWorker& w, HFONT small, HFONT big) {
-    const ChannelSnapshot s = w.Snapshot(true);
+    const ChannelSnapshot s = w.Snapshot();
     const int64_t now = NowMs();
     const int64_t age = s.lastFrameMs ? now - s.lastFrameMs : 0;
     const bool stalled = s.state == ChannelState::Live && age > kStallWarnMs;
     const COLORREF accent = stalled ? kStallColor : StateColor(s.state);
 
     FillRectColor(dc, tile, RGB(18, 20, 24));
-    DrawVideo(dc, tile, s);
+    DrawVideo(dc, tile, s.frame.get());
 
     SetBkMode(dc, TRANSPARENT);
 
@@ -125,7 +139,7 @@ void DrawTile(HDC dc, const RECT& tile, StreamWorker& w, HFONT small, HFONT big)
             SetTextColor(dc, RGB(200, 200, 200));
             RECT t2 = band;
             t2.top = band.top + 38;
-            DrawTextW(dc, L"connection open, waiting for packets (reconnect after 3.0s)", -1, &t2,
+            DrawTextW(dc, L"connection open, waiting for video (reconnect after 3.0s)", -1, &t2,
                       DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
         } else if (!s.lastError.empty()) {
             SelectObject(dc, small);
@@ -136,15 +150,17 @@ void DrawTile(HDC dc, const RECT& tile, StreamWorker& w, HFONT small, HFONT big)
         }
     }
 
-    // 하단 정보 바: 채널명 · 상태 · fps · 해상도 · 코덱 · 재연결 횟수 · 마지막 프레임 이후 경과
+    // 하단 정보 바: 채널명 · 상태 · 디코딩 fps · 해상도 · 코덱 · 재연결 횟수 · 마지막 프레임 이후 경과
     RECT bar = tile;
     bar.top = tile.bottom - 26;
     FillRectColor(dc, bar, RGB(0, 0, 0));
     SelectObject(dc, small);
     wchar_t info[256];
     const long long ageMs = s.lastFrameMs ? age : -1;
-    swprintf_s(info, L"  %s   %S   %.1f fps   %dx%d   %S   reconnects %d   last frame %lld ms",
-               Widen(w.Name()).c_str(), stalled ? "STALLED" : ToString(s.state), s.fps, s.width, s.height,
+    const int fw = s.frame ? s.frame->width : 0;
+    const int fh = s.frame ? s.frame->height : 0;
+    swprintf_s(info, L"  %s   %S   decode %.1f fps   %dx%d   %S   reconnects %d   last frame %lld ms",
+               Widen(w.Name()).c_str(), stalled ? "STALLED" : ToString(s.state), s.decodeFps, fw, fh,
                s.codec.empty() ? "-" : s.codec.c_str(), s.reconnects, ageMs);
     SetTextColor(dc, RGB(235, 235, 235));
     DrawTextW(dc, info, -1, &bar, DT_LEFT | DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
@@ -156,6 +172,15 @@ void DrawTile(HDC dc, const RECT& tile, StreamWorker& w, HFONT small, HFONT big)
     DrawFrameBorder(dc, tile, accent, 3);
 }
 
+void ReleaseBackBuffer() {
+    if (!g_backDc) return;
+    SelectObject(g_backDc, g_backOldBmp);
+    DeleteObject(g_backBmp);
+    DeleteDC(g_backDc);
+    g_backDc = nullptr;
+    g_backBmp = nullptr;
+}
+
 void Paint(HWND hwnd) {
     PAINTSTRUCT ps;
     HDC wdc = BeginPaint(hwnd, &ps);
@@ -164,15 +189,20 @@ void Paint(HWND hwnd) {
     const int cw = client.right;
     const int ch = client.bottom;
 
-    // 깜빡임 없이 그리기 위해 메모리 DC에 먼저 그린다.
-    HDC dc = CreateCompatibleDC(wdc);
-    HBITMAP bmp = CreateCompatibleBitmap(wdc, cw, ch);
-    HGDIOBJ oldBmp = SelectObject(dc, bmp);
+    // 깜빡임 없이 그리기 위해 메모리 DC에 먼저 그린다. 창 크기가 바뀔 때만 뒷버퍼를 다시 만든다.
+    if (!g_backDc || cw != g_backW || ch != g_backH) {
+        ReleaseBackBuffer();
+        g_backDc = CreateCompatibleDC(wdc);
+        g_backBmp = CreateCompatibleBitmap(wdc, std::max(cw, 1), std::max(ch, 1));
+        g_backOldBmp = SelectObject(g_backDc, g_backBmp);
+        g_backW = cw;
+        g_backH = ch;
+    }
+    HDC dc = g_backDc;
+    HFONT small = g_small;
+    HFONT big = g_big;
     FillRectColor(dc, client, RGB(8, 9, 11));
-
-    HFONT small = CreateFontW(15, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Consolas");
-    HFONT big = CreateFontW(26, 0, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Consolas");
-    HGDIOBJ oldFont = SelectObject(dc, small);
+    SelectObject(dc, small);
 
     const int n = static_cast<int>(g_workers.size());
     if (g_focus >= 0 && g_focus < n) {
@@ -194,13 +224,20 @@ void Paint(HWND hwnd) {
         }
     }
 
+    // 화면 갱신 FPS: 실제로 그린 횟수를 1초 단위로 센다.
+    ++g_paintCount;
+    const int64_t now = NowMs();
+    if (now - g_paintWindowStart >= 1000) {
+        g_renderFps = g_paintCount * 1000.0 / (now - g_paintWindowStart);
+        g_paintCount = 0;
+        g_paintWindowStart = now;
+        // 영상을 가리지 않도록 창 제목에 표시한다.
+        wchar_t title[128];
+        swprintf_s(title, L"RTSP Multiview  -  render %.1f fps  -  keys: 1~9 focus, 0/Esc grid", g_renderFps);
+        SetWindowTextW(hwnd, title);
+    }
+
     BitBlt(wdc, 0, 0, cw, ch, dc, 0, 0, SRCCOPY);
-    SelectObject(dc, oldFont);
-    DeleteObject(small);
-    DeleteObject(big);
-    SelectObject(dc, oldBmp);
-    DeleteObject(bmp);
-    DeleteDC(dc);
     EndPaint(hwnd, &ps);
 }
 
@@ -260,6 +297,10 @@ int main(int argc, char** argv) {
     for (auto& w : g_workers) w->Start();
     Log("main", "started " + std::to_string(g_workers.size()) + " channels");
 
+    g_small = CreateFontW(15, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Consolas");
+    g_big = CreateFontW(26, 0, 0, 0, FW_BOLD, 0, 0, 0, DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Consolas");
+    g_paintWindowStart = NowMs();
+
     HINSTANCE inst = GetModuleHandleW(nullptr);
     WNDCLASSW wc{};
     wc.style = CS_DBLCLKS;
@@ -283,6 +324,9 @@ int main(int argc, char** argv) {
     }
 
     for (auto& w : g_workers) w->Stop();
+    ReleaseBackBuffer();
+    DeleteObject(g_small);
+    DeleteObject(g_big);
     avformat_network_deinit();
     return 0;
 }

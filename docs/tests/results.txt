@@ -1,0 +1,5 @@
+Test       Pass Detail                                                                                                                         
+----       ---- ------                                                                                                                         
+cut        True down->lost 186 ms | back->next connect 5,723 ms (backoff wait) | successful connect->first frame 2,943 ms | back->LIVE 8,666 ms
+freeze     True freeze->last frame -17 ms (frames already in flight) | last frame->lost 3,017 ms | resume->LIVE 1,320 ms                       
+video_stop True last video frame->lost 3,044 ms while 140 audio packets kept arriving
